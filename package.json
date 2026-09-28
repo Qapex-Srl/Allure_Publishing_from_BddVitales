@@ -1,5 +1,5 @@
 {
-  "name": "allure-docker-publisher",
+  "name": "@qapex/allure-docker-publisher",
   "version": "0.1.0",
   "description": "Framework-independent Allure Docker Service publisher with CLI and Node.js API",
   "type": "commonjs",
@@ -20,5 +20,28 @@
   "scripts": {
     "test": "node --test",
     "prepack": "npm test"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Qapex-Srl/Allure_Publishing_from_BddVitales.git"
+  },
+  "homepage": "https://github.com/Qapex-Srl/Allure_Publishing_from_BddVitales#readme",
+  "bugs": {
+    "url": "https://github.com/Qapex-Srl/Allure_Publishing_from_BddVitales/issues"
+  },
+  "keywords": [
+    "allure",
+    "allure-report",
+    "allure-docker",
+    "allure-docker-service",
+    "playwright",
+    "playwright-bdd",
+    "testing",
+    "e2e",
+    "ci",
+    "ci-cd"
+  ]
 }

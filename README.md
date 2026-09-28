@@ -1,33 +1,36 @@
 # Allure Docker Publisher
 
-A lightweight Node.js CLI and API for publishing **Allure test results**
-to [Allure Docker
-Service](https://github.com/fescobar/allure-docker-service).
+Publish **Allure test results** directly to [Allure Docker
+Service](https://github.com/fescobar/allure-docker-service) from
+Playwright, Playwright BDD, CI/CD pipelines, or any framework that
+generates standard `allure-results`.
 
-Designed to work with **Playwright**, **Playwright BDD**, and any
-testing framework that generates standard `allure-results`.
+``` bash
+npm install --save-dev @qapex/allure-docker-publisher
+```
 
-No Java or Allure CLI installation is required on the test runner.
+No Java or local Allure CLI installation is required.
 
 ## How it works
 
 ``` text
-Test Framework
-      |
-      | generates
-      v
-allure-results/
-      |
-      | publish-allure
-      v
-Allure Docker Service
-      |
-      v
-Allure Report
+Playwright / Playwright BDD / Test Framework
+                    |
+                    | generates
+                    v
+              allure-results/
+                    |
+                    | publish-allure
+                    v
+          Allure Docker Service
+                    |
+                    v
+              Allure Report
 ```
 
-The library does not execute tests or generate Allure result files. It
-takes an existing `allure-results` directory, uploads its contents to
+The library does not execute tests or generate Allure result files.
+
+It takes an existing `allure-results` directory, uploads its contents to
 Allure Docker Service, generates the report, and returns the report URL.
 
 ## Features
@@ -58,10 +61,10 @@ Allure Docker Service, generates the report, and returns the report URL.
 
 ## Installation
 
-### From GitHub
+Install the package from npm:
 
 ``` bash
-npm install --save-dev github:Qapex-Srl/Allure_Publishing_from_BddVitales
+npm install --save-dev @qapex/allure-docker-publisher
 ```
 
 If your project uses Playwright, install the Allure reporter as well:
@@ -72,10 +75,33 @@ npm install --save-dev allure-playwright
 
 ## Quick start
 
+### 1. Generate Allure results
+
 Run your tests first so that the `allure-results` directory is
 generated.
 
-Then publish the results:
+For Playwright, configure `allure-playwright` in `playwright.config.ts`:
+
+``` ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  reporter: [
+    ['list'],
+    ['allure-playwright', {
+      resultsDir: 'allure-results'
+    }]
+  ]
+});
+```
+
+Then run:
+
+``` bash
+npx playwright test
+```
+
+### 2. Publish the results
 
 ``` bash
 npx publish-allure \
@@ -275,8 +301,10 @@ npx publish-allure \
 ```
 
 For CI/CD, store credentials as pipeline secrets rather than directly in
-the repository. HTTPS should be used when credentials are transmitted
-over untrusted networks.
+the repository.
+
+HTTPS should be used when credentials are transmitted over untrusted
+networks.
 
 ## Dry run
 
@@ -341,7 +369,7 @@ The package can also be used programmatically:
 const {
   publishReport,
   reportOptionsFromEnv
-} = require('allure-docker-publisher');
+} = require('@qapex/allure-docker-publisher');
 
 const summary = await publishReport({
   ...reportOptionsFromEnv(),
@@ -355,6 +383,14 @@ console.log(summary.reportURL);
 ```
 
 TypeScript definitions are included with the package.
+
+## Updating
+
+Update to the latest published version with:
+
+``` bash
+npm install --save-dev @qapex/allure-docker-publisher@latest
+```
 
 ## Exit codes
 
@@ -405,10 +441,11 @@ npm pack
 
 This project is currently marked as `UNLICENSED`.
 
-Publishing a repository publicly on GitHub does not automatically grant
-permission to use, modify, or redistribute its source code. Add an
-appropriate open-source license if the project is intended for public
-reuse.
+Publishing a repository publicly on GitHub or npm does not automatically
+grant permission to modify or redistribute its source code.
+
+Add an appropriate open-source license if the project is intended for
+public reuse.
 
 ## Related projects
 
