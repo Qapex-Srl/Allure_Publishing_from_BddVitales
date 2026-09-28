@@ -1,0 +1,9 @@
+node_modules/
+*.tgz
+.env
+.env.*
+!.env.example
+allure-results/
+allure-report/
+playwright-report/
+test-results/

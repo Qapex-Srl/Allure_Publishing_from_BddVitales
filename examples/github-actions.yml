@@ -1,0 +1,32 @@
+# Copy into the CONSUMER project's .github/workflows/ directory.
+name: BDD tests and Allure
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+# All publishers using this remote project must be serialized, including other repos.
+concurrency:
+  group: allure-example-project
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest # Use self-hosted if Allure is on a private network.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npm test
+      - name: Publish Allure even when tests fail
+        if: ${{ !cancelled() }}
+        run: npx --no-install publish-allure --clean --json
+        env:
+          ALLURE_BASE_URL: ${{ vars.ALLURE_BASE_URL }}
+          ALLURE_PROJECT_ID: example-project
+          ALLURE_USERNAME: ${{ secrets.ALLURE_USERNAME }}
+          ALLURE_PASSWORD: ${{ secrets.ALLURE_PASSWORD }}
+          ALLURE_EXECUTION_NAME: GitHub run ${{ github.run_number }}
+          ALLURE_EXECUTION_FROM: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ALLURE_EXECUTION_TYPE: github

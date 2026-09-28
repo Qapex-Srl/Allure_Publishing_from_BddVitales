@@ -1,0 +1,24 @@
+{
+  "name": "allure-docker-publisher",
+  "version": "0.1.0",
+  "description": "Framework-independent Allure Docker Service publisher with CLI and Node.js API",
+  "type": "commonjs",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "src/reporting.js",
+  "types": "src/reporting.d.ts",
+  "bin": {
+    "publish-allure": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "examples"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "prepack": "npm test"
+  }
+}
