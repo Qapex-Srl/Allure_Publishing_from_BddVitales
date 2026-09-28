@@ -1,144 +1,421 @@
 # Allure Docker Publisher
 
-Libreria Node.js e CLI indipendente dal framework per pubblicare `allure-results`
-su [Allure Docker Service](https://github.com/fescobar/allure-docker-service#allure-api).
-Nessuna dipendenza runtime, Node.js >=22. Supporta Playwright BDD e qualsiasi
-framework che produca risultati Allure nel formato standard con file `*-result.json`.
-Non esegue i test e non richiede Java o Allure CLI sul runner.
+A lightweight Node.js CLI and API for publishing **Allure test results**
+to [Allure Docker
+Service](https://github.com/fescobar/allure-docker-service).
 
-## Installazione
+Designed to work with **Playwright**, **Playwright BDD**, and any
+testing framework that generates standard `allure-results`.
 
-Il pacchetto non è ancora pubblicato su npm. Per provarlo dalla cartella della libreria:
+No Java or Allure CLI installation is required on the test runner.
 
-```sh
-npm ci
-npm test
-npm pack
+## How it works
+
+``` text
+Test Framework
+      |
+      | generates
+      v
+allure-results/
+      |
+      | publish-allure
+      v
+Allure Docker Service
+      |
+      v
+Allure Report
 ```
 
-Nel progetto dei test:
+The library does not execute tests or generate Allure result files. It
+takes an existing `allure-results` directory, uploads its contents to
+Allure Docker Service, generates the report, and returns the report URL.
 
-```sh
-npm install --save-dev /percorso/allure-docker-publisher-0.1.0.tgz allure-playwright
-npx publish-allure --url http://192.0.2.10:5050 --project esempio --clean
+## Features
+
+-   Uploads standard `allure-results`
+-   Works with Playwright and Playwright BDD
+-   Framework independent
+-   CLI and Node.js API
+-   Automatic Allure project creation
+-   Optional cleanup of previous results
+-   Allure Docker Service authentication support
+-   Batch uploads
+-   Attachment support
+-   Dry-run mode
+-   JSON output for CI/CD pipelines
+-   TypeScript definitions included
+-   No Java or Allure CLI required
+
+## Requirements
+
+-   Node.js \>= 22
+-   A running [Allure Docker
+    Service](https://github.com/fescobar/allure-docker-service)
+-   A test framework configured to generate `allure-results`
+
+> The URL must point to the **Allure Docker Service API**, usually
+> running on port `5050`, not to the Allure Docker Service UI.
+
+## Installation
+
+### From GitHub
+
+``` bash
+npm install --save-dev github:Qapex-Srl/Allure_Publishing_from_BddVitales
 ```
 
-Dopo la pubblicazione del repository puoi installarlo con
-`npm install --save-dev github:OWNER/Allure_Publishing_from_BddVitales#COMMIT`.
-Sostituisci OWNER e COMMIT con account e revisione effettivi. Il nome npm è provvisorio:
-la disponibilità sul registry non è stata verificata. `npm publish` pubblica un
-pacchetto sul registry npm, mentre `publish-allure` pubblica un report sul server.
+If your project uses Playwright, install the Allure reporter as well:
 
-Puoi aggiungere `"report:publish": "publish-allure"` agli scripts del progetto:
+``` bash
+npm install --save-dev allure-playwright
+```
 
-```sh
-npm run report:publish -- --url http://192.0.2.10:5050 --project esempio --clean
+## Quick start
+
+Run your tests first so that the `allure-results` directory is
+generated.
+
+Then publish the results:
+
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project my-project
+```
+
+The default results directory is `allure-results`.
+
+To use another directory:
+
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project my-project \
+  --results ./my-allure-results
+```
+
+## Playwright
+
+Configure `allure-playwright` in `playwright.config.ts`:
+
+``` ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  reporter: [
+    ['list'],
+    ['allure-playwright', {
+      resultsDir: 'allure-results'
+    }]
+  ]
+});
+```
+
+Run your tests:
+
+``` bash
+npx playwright test
+```
+
+Then publish the generated results:
+
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project playwright-tests
 ```
 
 ## Playwright BDD
 
-Nel [framework di riferimento](https://github.com/vitalets/playwright-bdd-example)
-mantieni `defineBddConfig`, step, feature, webServer e impostazioni esistenti.
-Aggiungi il [reporter ufficiale Allure Playwright](https://allurereport.org/docs/playwright/):
+The publisher works with
+[playwright-bdd](https://github.com/vitalets/playwright-bdd) without
+requiring changes to your feature files, steps, fixtures, or BDD
+configuration.
 
-```ts
+``` text
+.feature files
+      |
+      v
+playwright-bdd
+      |
+      v
+Playwright
+      |
+      v
+allure-playwright
+      |
+      v
+allure-results/
+      |
+      v
+publish-allure
+      |
+      v
+Allure Docker Service
+```
+
+Keep your existing `defineBddConfig` configuration and add the Allure
+reporter:
+
+``` ts
 reporter: [
   ['list'],
-  ['allure-playwright', { resultsDir: 'allure-results' }],
-],
+  ['allure-playwright', {
+    resultsDir: 'allure-results'
+  }]
+]
 ```
 
-Vedi `examples/playwright.config.ts`. Prima di ogni esecuzione elimina i risultati
-locali precedenti; Allure accumula i file presenti. Poi esegui il comando BDD
-originale (`npm test`, con generazione BDD) e pubblica anche in caso di test falliti.
-La libreria legge risultati, container e allegati dalla directory, senza conoscere
-nomi di progetto, ambienti, feature o fixture aziendali.
+Then execute your normal BDD test command and publish the results:
 
-## Configurazione
+``` bash
+npm test
 
-```sh
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project bdd-tests
+```
+
+## npm scripts
+
+You can add the publisher to your project's `package.json`:
+
+``` json
+{
+  "scripts": {
+    "test": "playwright test",
+    "report:publish": "publish-allure"
+  }
+}
+```
+
+Then:
+
+``` bash
+npm test
+
+npm run report:publish -- \
+  --url http://localhost:5050 \
+  --project my-project
+```
+
+## Configuration
+
+Configuration can be provided using CLI arguments or environment
+variables.
+
+  CLI option           Environment variable      Default
+  -------------------- ------------------------- ------------------
+  `--url`              `ALLURE_BASE_URL`         Required
+  `--project`          `ALLURE_PROJECT_ID`       Required
+  `--results`          `ALLURE_RESULTS_DIR`      `allure-results`
+  `--public-url`       `ALLURE_PUBLIC_URL`       Service URL
+  `--clean`            `ALLURE_CLEAN_RESULTS`    `false`
+  `--timeout-ms`       `ALLURE_TIMEOUT_MS`       `120000`
+  `--max-bytes`        `ALLURE_MAX_BYTES`        `1073741824`
+  `--batch-bytes`      `ALLURE_BATCH_BYTES`      `8388608`
+  `--max-file-bytes`   `ALLURE_MAX_FILE_BYTES`   `33554432`
+  `--execution-name`   `ALLURE_EXECUTION_NAME`   Server default
+  `--execution-from`   `ALLURE_EXECUTION_FROM`   Server default
+  `--execution-type`   `ALLURE_EXECUTION_TYPE`   Server default
+
+CLI arguments take precedence over environment variables.
+
+To see all available options:
+
+``` bash
 npx publish-allure --help
-npx publish-allure --url http://localhost:5050 --project esempio --dry-run --json
 ```
 
-| Flag | Variabile | Default |
-| --- | --- | --- |
-| `--url` | `ALLURE_BASE_URL` | obbligatorio |
-| `--project` | `ALLURE_PROJECT_ID` | obbligatorio |
-| `--results` | `ALLURE_RESULTS_DIR` | `allure-results` |
-| `--public-url` | `ALLURE_PUBLIC_URL` | URL di connessione |
-| `--clean` | `ALLURE_CLEAN_RESULTS` | `false` |
-| `--timeout-ms` | `ALLURE_TIMEOUT_MS` | `120000` per richiesta |
-| `--max-bytes` | `ALLURE_MAX_BYTES` | `1073741824` |
-| `--batch-bytes` | `ALLURE_BATCH_BYTES` | `8388608` |
-| `--max-file-bytes` | `ALLURE_MAX_FILE_BYTES` | `33554432` |
-| `--execution-name` | `ALLURE_EXECUTION_NAME` | default server |
-| `--execution-from` | `ALLURE_EXECUTION_FROM` | default server |
-| `--execution-type` | `ALLURE_EXECUTION_TYPE` | default server |
+## Environment variables
 
-I flag prevalgono sulle variabili. Il progetto usa minuscole, numeri, `-`, `_`,
-e inizia con lettera o numero. URL completo `http://IP:PORTA` o `https://host`:
-il suffisso `/allure-docker-service` viene aggiunto se assente, anche dopo un
-prefisso di reverse proxy. `--public-url` indica la base pubblica del servizio.
+Instead of passing arguments every time:
 
-Per server con `SECURITY_ENABLED=1`, imposta insieme `ALLURE_USERNAME` e
-`ALLURE_PASSWORD` nei secrets della pipeline. Il client usa login, cookie JWT
-e token CSRF. Usa HTTPS per trasmettere credenziali su reti non fidate.
-Non sono supportati login SSO interattivi o refresh automatico della sessione;
-la durata della sessione server deve coprire l'intera pubblicazione.
+``` bash
+export ALLURE_BASE_URL=http://localhost:5050
+export ALLURE_PROJECT_ID=my-project
 
-`--dry-run` valida tutto localmente senza contattare il server. `--json` stampa
-un oggetto con progetto, conteggi, byte e `reportURL` (assente in dry run).
-Exit code 0 = completato, 1 = errore. Gli errori sono scritti su stderr.
+npx publish-allure
+```
 
-## Server Allure Docker e pipeline
+This is particularly useful in CI/CD environments.
 
-Configura il server con `CHECK_RESULTS_EVERY_SECONDS=NONE` per generare tramite
-API dopo l'upload completo, `API_RESPONSE_LESS_VERBOSE=0` per verificare i
-conteggi caricati e `KEEP_HISTORY=1` se desideri trend e storico.
-La porta deve essere quella del servizio API (tipicamente 5050), non della UI.
+## Clean previous results
 
-La sequenza è validazione locale, login opzionale, pulizia opzionale,
-`send-results?force_project_creation=true` in batch, `generate-report` e link.
-`--clean` rimuove i risultati remoti precedenti, conservando lo storico;
-senza `--clean` i nuovi risultati si aggiungono a quelli già presenti.
-Non vengono cancellati progetti o storico. Un errore a metà upload può lasciare
-risultati parziali sul server: verifica lo stato prima di rilanciare con `--clean`.
-Non ci sono retry automatici delle operazioni che modificano il server.
+By default, new results are added to the results already associated with
+the project.
 
-Serializza le pubblicazioni per progetto remoto, oppure usa ID distinti per job.
-Per gli shard, raccogli prima tutti gli artifact in una directory e pubblica una
-sola volta. I file devono essere regolari, nella radice della directory: sottocartelle
-e link simbolici sono rifiutati. La directory non deve cambiare durante l'invio.
-Il limite batch conta byte originali: Base64 aumenta il payload di circa un terzo;
-un file singolo può superare il target batch fino al limite del singolo file.
+Use `--clean` to remove previous remote results before uploading the new
+execution:
 
-Vedi `examples/github-actions.yml`: pubblica dopo test falliti preservando lo
-stato di fallimento del job. Installa prima questa libreria nelle devDependencies
-e aggiorna il lockfile del progetto. Il runner deve poter raggiungere il server.
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project my-project \
+  --clean
+```
 
-## API JavaScript / TypeScript
+Allure history is preserved when supported and configured by the server.
 
-```js
-const { publishReport, reportOptionsFromEnv } = require('allure-docker-publisher');
+## Authentication
+
+If Allure Docker Service has authentication enabled, configure:
+
+``` bash
+export ALLURE_USERNAME=my-user
+export ALLURE_PASSWORD=my-password
+```
+
+Then run the publisher normally:
+
+``` bash
+npx publish-allure \
+  --url https://allure.example.com \
+  --project my-project
+```
+
+For CI/CD, store credentials as pipeline secrets rather than directly in
+the repository. HTTPS should be used when credentials are transmitted
+over untrusted networks.
+
+## Dry run
+
+Validate the local results without contacting the Allure server:
+
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project my-project \
+  --dry-run
+```
+
+For machine-readable output:
+
+``` bash
+npx publish-allure \
+  --url http://localhost:5050 \
+  --project my-project \
+  --dry-run \
+  --json
+```
+
+## CI/CD
+
+A typical pipeline is:
+
+``` text
+Install dependencies
+        |
+        v
+Run tests
+        |
+        v
+Generate allure-results
+        |
+        v
+Publish results
+        |
+        v
+Generate Allure report
+```
+
+The publishing step should normally run even when some tests fail, so
+failed test executions are still visible in Allure.
+
+Example:
+
+``` bash
+npx publish-allure \
+  --url "$ALLURE_BASE_URL" \
+  --project "$ALLURE_PROJECT_ID" \
+  --clean
+```
+
+The CI runner must be able to reach the Allure Docker Service API.
+
+## JavaScript / TypeScript API
+
+The package can also be used programmatically:
+
+``` js
+const {
+  publishReport,
+  reportOptionsFromEnv
+} = require('allure-docker-publisher');
+
 const summary = await publishReport({
   ...reportOptionsFromEnv(),
   baseURL: 'http://localhost:5050',
-  projectId: 'esempio',
+  projectId: 'my-project',
   resultsDir: 'allure-results',
-  clean: true,
+  clean: true
 });
+
 console.log(summary.reportURL);
 ```
 
-Tipi TypeScript inclusi. I test verificano il contratto HTTP tramite risposte
-simulate, autenticazione, allegati, errori e CLI. Serve una verifica sul tuo
-server per confermare proxy, TLS e configurazione reale.
+TypeScript definitions are included with the package.
 
-## Pubblicazione della libreria
+## Exit codes
 
-Il repository può essere pubblicato su GitHub e installato direttamente da lì.
-Per una futura release npm scegli nome/scope disponibile, autore e licenza;
-poi esegui `npm publish` con un account npm autorizzato. La licenza è al momento
-`UNLICENSED`: la pubblicazione GitHub non concede automaticamente una licenza
-open source. Non sono inclusi credenziali o riferimenti a progetti aziendali.
+``` text
+0  Publication completed successfully
+1  Publication failed
+```
+
+Errors are written to `stderr`, making the CLI suitable for CI/CD
+pipelines.
+
+## Important notes
+
+Avoid running multiple publishers simultaneously against the same Allure
+project.
+
+For parallel or sharded tests, collect the generated Allure artifacts
+into a single `allure-results` directory and publish once after all
+shards have completed.
+
+If an upload fails midway, some results may already exist on the server.
+Check the project state before retrying or run the next publication with
+`--clean`.
+
+## Development
+
+Clone the repository:
+
+``` bash
+git clone https://github.com/Qapex-Srl/Allure_Publishing_from_BddVitales.git
+cd Allure_Publishing_from_BddVitales
+```
+
+Install dependencies and run tests:
+
+``` bash
+npm ci
+npm test
+```
+
+Create a local npm package:
+
+``` bash
+npm pack
+```
+
+## License
+
+This project is currently marked as `UNLICENSED`.
+
+Publishing a repository publicly on GitHub does not automatically grant
+permission to use, modify, or redistribute its source code. Add an
+appropriate open-source license if the project is intended for public
+reuse.
+
+## Related projects
+
+-   [Allure Docker
+    Service](https://github.com/fescobar/allure-docker-service)
+-   [Allure Docker Service
+    UI](https://github.com/fescobar/allure-docker-service-ui)
+-   [Playwright](https://github.com/microsoft/playwright)
+-   [playwright-bdd](https://github.com/vitalets/playwright-bdd)
+-   [allure-playwright](https://www.npmjs.com/package/allure-playwright)
