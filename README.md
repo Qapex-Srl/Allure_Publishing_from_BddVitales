@@ -53,11 +53,53 @@ Allure Docker Service, generates the report, and returns the report URL.
 
 -   Node.js \>= 22
 -   A running [Allure Docker
-    Service](https://github.com/fescobar/allure-docker-service)
+    Service](https://github.com/fescobar/allure-docker-service) configured
+    with `API_RESPONSE_LESS_VERBOSE=0` (see below)
 -   A test framework configured to generate `allure-results`
 
 > The URL must point to the **Allure Docker Service API**, usually
 > running on port `5050`, not to the Allure Docker Service UI.
+
+### Required Allure Docker Service configuration
+
+Set `API_RESPONSE_LESS_VERBOSE=0` in the **Allure Docker Service
+container environment**. This is a server setting, not a publisher CLI
+option or an environment variable to set only in the publisher process.
+
+For Docker Compose, add the setting to your existing Allure service:
+
+``` yaml
+services:
+  allure:
+    environment:
+      API_RESPONSE_LESS_VERBOSE: "0"
+```
+
+Apply the change by recreating the container (replace `allure` with your
+Compose service name):
+
+``` bash
+docker compose up -d --force-recreate allure
+```
+
+The publisher currently requires `data.processed_files_count` to confirm
+that every file in each upload batch was processed. It also checks
+`data.failed_files_count` when present. With
+`API_RESPONSE_LESS_VERBOSE=1`, the server omits these counters, so the
+publisher stops before requesting report generation, even if the upload
+returned HTTP 200.
+
+If you see this error, check the server setting above:
+
+``` text
+Allure: upload incompleto o risposta inattesa; report non generato (richiesto API_RESPONSE_LESS_VERBOSE=0)
+```
+
+The same error can also indicate an incomplete upload or an unexpected
+response. A successful `--dry-run` only validates local files; it does
+not check server configuration or upload responses. Some files may
+already have reached the server before publication stopped; see
+[Important notes](#important-notes) before retrying.
 
 ## Installation
 
